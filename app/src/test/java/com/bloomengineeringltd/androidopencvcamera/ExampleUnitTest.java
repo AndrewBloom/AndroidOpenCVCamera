@@ -1,4 +1,4 @@
-package net.jonreynolds.androidopencvcamera;
+package com.bloomengineeringltd.androidopencvcamera;
 
 import org.junit.Test;
 

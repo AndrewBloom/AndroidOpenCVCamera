@@ -4,19 +4,20 @@
 #include <opencv2/imgproc.hpp>
 
 #include <GLES2/gl2.h>
+#include <opencv2/imgproc/types_c.h>
 
 #include "common.hpp"
 
-using namespace cv;
+//using namespace cv;
 
 extern "C" JNIEXPORT void
 
 JNICALL
-Java_net_jonreynolds_androidopencvcamera_MyGLSurfaceView_processFrame(JNIEnv *env, jobject /* this */,
+Java_com_bloomengineeringltd_androidopencvcamera_MyGLSurfaceView_processFrame(JNIEnv *env, jclass clazz,
                                                                       jint texIn, jint texOut,
                                                                       jint w, jint h,
                                                                       jboolean frontFacing) {
-    static UMat m;
+    static cv::UMat m;
 
     LOGD("Processing on CPU");
     int64_t t;
@@ -25,7 +26,7 @@ Java_net_jonreynolds_androidopencvcamera_MyGLSurfaceView_processFrame(JNIEnv *en
     // read
     t = getTimeMs();
     // expecting FBO to be bound, read pixels to mat
-    glReadPixels(0, 0, m.cols, m.rows, GL_RGBA, GL_UNSIGNED_BYTE, m.getMat(ACCESS_WRITE).data);
+    glReadPixels(0, 0, m.cols, m.rows, GL_RGBA, GL_UNSIGNED_BYTE, m.getMat(cv::ACCESS_WRITE).data);
     LOGD("glReadPixels() costs %d ms", getTimeInterval(t));
 
     t = getTimeMs();
@@ -50,6 +51,6 @@ Java_net_jonreynolds_androidopencvcamera_MyGLSurfaceView_processFrame(JNIEnv *en
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texOut);
     t = getTimeMs();
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m.cols, m.rows, GL_RGBA, GL_UNSIGNED_BYTE, m.getMat(ACCESS_READ).data);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m.cols, m.rows, GL_RGBA, GL_UNSIGNED_BYTE, m.getMat(cv::ACCESS_READ).data);
     LOGD("glTexSubImage2D() costs %d ms", getTimeInterval(t));
 }

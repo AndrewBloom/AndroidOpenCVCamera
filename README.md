@@ -1,7 +1,7 @@
 # AndroidOpenCVCamera
 A boilerplate camera app for processing camera preview frames in real-time using the OpenCV Android SDK and the native OpenCV library.
 
-This is intended to give developers a simple way to prototype real-time image processing techniques on a smartphone. The application is set up to perform image processing using native code for best performance. 
+This is intended to give developers a simple way to prototype real-time image processing techniques on a smartphone. The application is just the simplest demo for using OpenCV and uses a very slow way to grab images, which is through openGL glReadPixels. It's far from being the best practice and it's quite slow. 
 
 As an example, this application uses OpenCV to get the Laplacian of each preview frame.
 
@@ -14,48 +14,37 @@ As an example, this application uses OpenCV to get the Laplacian of each preview
 - Shows FPS in application
 
 ## Setup
-#### [Tested with OpenCV 3.4.2]
-This project contains only the Android code necessary for performing native image processing. In order to import and use OpenCV, users must perform a few steps, which are outlined below. You can also reference [this guide](https://medium.com/@sukritipaul005/a-beginners-guide-to-installing-opencv-android-in-android-studio-ea46a7b4f2d3), but you must perform **Step 5** after doing so.
+#### [Tested with OpenCV 4.8]
+This project contains only the Android code necessary for performing native image processing. In order to import and use OpenCV, users must perform a few steps, which are outlined below. You can also reference [this guide](https://proandroiddev.com/android-studio-step-by-step-guide-to-download-and-install-opencv-for-android-9ddcb78a8bc3).
 
 ### Step 1 - Download the OpenCV Android SDK
 You can obtain the latest version of the OpenCV Android SDK at https://github.com/opencv/opencv/releases, labelled *opencv-{VERSION}-android-sdk.zip* under Assets. After extracting the contents of the zip file, you should have a directory called *OpenCV-android-sdk*.
 
 ### Step 2 - Import the OpenCV Android SDK as a module in this project
-Open the cloned version of this repo as a project in Android Studio. Then, click File -> New -> Import Module. Navigate to where you just extracted the OpenCV Android SDK files, and use *OpenCV-android-sdk/sdk/java* as the source directory for the import. Click Next, then click Finish, using the default import settings.
+Open the cloned version of this repo as a project in Android Studio. Then, click File -> New -> Import Module. Navigate to where you just extracted the OpenCV Android SDK files, and use *OpenCV-android-sdk/sdk/* as the source directory for the import. Click Next, then click Finish, using the default import settings.
 
 ### Step 3 - Modify the OpenCV module's imported build.gradle
-After the import completes, a new folder *openCVLibrary{VERSION_NUMBER}* is created in the root of the project. In this directory, there's a file called *build.gradle*, which you must modify in order to meet the SDK requirements of the application. Make the following changes:
+After the import completes, a new folder *sdk* is created in the root of the project. In this directory, there's a file called *build.gradle*, which you must modify in order to meet the SDK requirements of the application. Make the following changes:
 
-#### In android
-compileSdkVersion 14 -> compileSdkVersion27
+for me, this meant:
+compileSdkVersion 33
+targetSdkVersion 33
 
-#### In android.defaultConfig
-minSdkVersion 8 -> minSdkVersion 23
+compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+}
 
-targetSdkVersion 21 -> targetSdkVersion 27
+buildFeatures {
+    aidl = true
+    buildConfig = true
+}
 
-### Step 4 - Copy native libs from OpenCV Android SDK
-Create a new folder called *jniLibs* in the project's *app/src/main* folder. Then, copy everything in *OpenCV-android-sdk/sdk/native/libs* to the *jniLibs* directory you just created.
-
-### Step 5 - Modify the CMakeLists.txt file
-Lastly, you just need to modify two strings in the CMakeList file to ensure your native libraries are linked correctly.
-Open the project's *app/CMakeLists.txt* file. The first three lines should look like this:
-```
-# Path definitions
-set(pathToProject /Users/jonathanreynolds/Documents/Projects/AndroidOpenCVCamera)
-set(pathToOpenCv /Users/jonathanreynolds/Documents/Projects/OpenCV-android-sdk)
-```
-Change */Users/jonathanreynolds/Documents/Projects/AndroidOpenCVCamera* to be the path to the project, and change */Users/jonathanreynolds/Documents/Projects/OpenCV-android-sdk* to be the path to your OpenCV Android SDK folder.
-
-#### Note:
-For Windows, make sure you are careful with the format of strings you use. You need to use forward slashes between directories, and backslashes should only be used to escape whitespace characters. Example:
-
-> C:\Users\Jonathan Reynolds\Documents\GitHub\AndroidOpenCVCamera
-
-becomes `set(pathToProject C:/Users/Jonathan\ Reynolds/Documents/GitHub/AndroidOpenCVCamera)`
-
-### Step 6 - Build and run
+### Step 4 - Build and run
 The app should build and run now. If you want to modify the behavior of the application, `MyGLSurfaceView.onCameraTexture` is the callback used in the Java layer, and it calls *`processFrame`* to do work in the native layer.
 
 ## Credits
+I updated the sample from https://github.com/J0Nreynolds/AndroidOpenCVCamera to an update version of OpenCV (4.8), the android app (manifest and gradle) and improved the CMakelist file.
+
+## Original Credits
 I created this application using OpenCV's Android samples, namely [Tutorial 4 - OpenCL](https://github.com/opencv/opencv/tree/3.4/samples/android/tutorial-4-opencl). The OpenCL sample demonstrated how to use the OpenCV Android SDK's `CameraGLSurfaceView`, which provides a nice interface for intercepting and processing Android camera preview frames.

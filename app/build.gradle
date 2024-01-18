@@ -1,17 +1,26 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 27
+    compileSdkVersion 34
+    namespace 'com.bloomengineeringltd.androidopencvcamera'
     defaultConfig {
-        applicationId "net.jonreynolds.androidopencvcamera"
+        applicationId "com.bloomengineeringltd.androidopencvcamera"
         minSdkVersion 23
-        targetSdkVersion 27
+        targetSdkVersion 34
         versionCode 1
         versionName "1.0"
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         externalNativeBuild {
             cmake {
-                cppFlags "-lGLESv2"
+                cppFlags '-std=c++17 -lGLESv2'
+                arguments "-DOpenCV_DIR="+"${project.rootDir}/sdk/native/jni"
+            }
+        }
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+        externalNativeBuild {
+            cmake {
             }
         }
     }
@@ -29,13 +38,14 @@ android {
 }
 
 dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
     implementation fileTree(include: ['*.jar', '.so'], dir: 'libs')
-    implementation 'com.android.support:appcompat-v7:27.1.1'
-    implementation 'com.android.support.constraint:constraint-layout:1.1.2'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.2'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     // Support library
-    implementation 'com.android.support:support-v13:27.1.1'
-    implementation project(':openCVLibrary342')
+    implementation 'androidx.legacy:legacy-support-v13:1.0.0'
+    implementation project(':sdk')
 }

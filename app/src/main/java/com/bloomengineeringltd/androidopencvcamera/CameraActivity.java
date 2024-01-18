@@ -1,4 +1,4 @@
-package net.jonreynolds.androidopencvcamera;
+package com.bloomengineeringltd.androidopencvcamera;
 
 import android.Manifest;
 import android.app.Activity;
@@ -111,7 +111,5 @@ public class CameraActivity extends Activity {
         }
         return context.checkPermission(permission, android.os.Process.myPid(), android.os.Process.myUid());
     }
-
-
 
 }
