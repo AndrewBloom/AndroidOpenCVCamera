@@ -8,15 +8,12 @@
 
 #include "common.hpp"
 
-//using namespace cv;
-
 extern "C" JNIEXPORT void
-
 JNICALL
-Java_com_bloomengineeringltd_androidopencvcamera_MyGLSurfaceView_processFrame(JNIEnv *env, jclass clazz,
+Java_com_bloomengineeringltd_androidopencvcamera_MyGLSurfaceView_processFrame(JNIEnv *env, jobject thiz,
                                                                       jint texIn, jint texOut,
                                                                       jint w, jint h,
-                                                                      jboolean frontFacing) {
+                                                                      jboolean front_facing) {
     static cv::UMat m;
 
     LOGD("Processing on CPU");
@@ -34,7 +31,7 @@ Java_com_bloomengineeringltd_androidopencvcamera_MyGLSurfaceView_processFrame(JN
     // I don't think this should be required, but I can't find
     // a way to get the OpenCV Android SDK to do this properly
     // (also, time taken to flip image is negligible)
-    if(frontFacing){
+    if(front_facing){
         flip(m, m, 1);
     }
     LOGD("flip() costs %d ms", getTimeInterval(t));
