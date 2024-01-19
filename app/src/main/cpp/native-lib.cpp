@@ -7,6 +7,7 @@
 #include <opencv2/imgproc/types_c.h>
 
 #include "common.hpp"
+#include "camera_engine.h"
 
 extern "C" JNIEXPORT void
 JNICALL

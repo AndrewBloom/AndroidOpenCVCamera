@@ -24,4 +24,5 @@ MESSAGE(${OpenCV_VERSION})
 target_link_libraries( native-lib
         ${OpenCV_LIBS}
         android
+        camera2ndk
         log )
