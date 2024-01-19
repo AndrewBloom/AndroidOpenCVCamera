@@ -6,9 +6,10 @@ set(CMAKE_VERBOSE_MAKEFILE on)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 
 #Added by IDE on project create
-set(CPP_ROOT src/main/cpp)
-set(SRC_FILES ${CPP_ROOT}/common.hpp ${CPP_ROOT}/native-lib.cpp)
-add_library( native-lib SHARED ${SRC_FILES} )
+add_library( native-lib SHARED
+        common.hpp
+        native-lib.cpp
+)
 
 # OpenCV library
 find_package(OpenCV 4)
