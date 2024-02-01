@@ -14,37 +14,33 @@ void processFrame(int w, int h, uint8_t *buffer, ImagePipe &pipe) {
     // This could be heavily simplified using luminance channel as grey image, it would then
     // skip the conversion from N12 to RGBA and RGBA to grayscale. It gives 50% gain, left as it is
     // just to document some conversions...
-    cv::UMat yuv21 = cv::Mat(h + h / 2, w, CV_8UC1, buffer).getUMat(cv::ACCESS_READ);
+    cv::UMat yuv12 = cv::Mat(h, w, CV_8UC1, buffer).getUMat(cv::ACCESS_READ);
 
-    cv::UMat m = cv::UMat(h, w, CV_8UC4);
     LOGD("Processing on CPU");
     int64_t t;
 
     t = getTimeMs();
-    cvtColor(yuv21, m, CV_YUV2RGBA_NV12);
     // Check if we should flip image due to frontFacing
     // I don't think this should be required, but I can't find
     // a way to get the OpenCV Android SDK to do this properly
     // (also, time taken to flip image is negligible)
     //if(front_facing){
     // back camera, flip it vertically
-        flip(m, m, 0);
+        flip(yuv12, yuv12, 0);
     //}
     LOGD("flip() costs %d ms", getTimeInterval(t));
 
+    cv::Mat out(h,w, CV_8UC3, pipe.imageTripleBuf->GetWriteBuffer());
     // modify
     t = getTimeMs();
-    cvtColor(m, m, CV_RGB2GRAY);
-    Laplacian(m, m, CV_8U);
-    multiply(m, 10, m);
-    cvtColor(m, m, CV_GRAY2RGBA);
+    Laplacian(yuv12, yuv12, CV_8U);
+    multiply(yuv12, 10, yuv12);
+    cvtColor(yuv12, out, CV_GRAY2RGB);
     LOGD("Laplacian() costs %d ms", getTimeInterval(t));
 
     // write back
     t = getTimeMs();
 
-    cv::Mat out(h,w, CV_8UC4, pipe.imageTripleBuf->GetWriteBuffer());
-    m.copyTo(out);
     /*int rowSize = pipe.width*4;
         for (int i = 0; i < pipe.height; i+=8)
             for (int j = 0; j < 8; j++)
@@ -99,7 +95,7 @@ Java_com_bloomengineeringltd_androidopencvcamera_GLES3JNILib_init(JNIEnv *env, j
     imgProc.processFunc = processFrame;
     cameraEngine.initCamSession(imgProc, 1280, 920);
     shaderManager = new ShaderManager();
-    textureQuad = new Model3d(4, ShaderManager::TEXTURE2D, shaderManager);
+    textureQuad = new Model3d(4, ShaderManager::TEXTURE2D, ShaderManager::RGB, shaderManager);
     textureQuad->loadBuffers((void *) QUAD);
 }
 
@@ -116,6 +112,7 @@ Java_com_bloomengineeringltd_androidopencvcamera_GLES3JNILib_step(JNIEnv *env, j
         FShaderParams *f_sh_par = shaderManager->getFShaderParams(ShaderManager::TEXTURE2D);
         f_sh_par->getWidthArray()[0] = imgPipe.width;
         f_sh_par->getHeightArray()[0] = imgPipe.height;
+        f_sh_par->getChannelArray()[0] = 3;
         textureQuad->makeRenderer(*f_sh_par);
         delete f_sh_par;
         renderer_state = SET;
