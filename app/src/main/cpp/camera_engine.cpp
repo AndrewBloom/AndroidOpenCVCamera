@@ -71,10 +71,8 @@ static void imageCallback(void* context, AImageReader* reader)
 
 static void processImage(AImage *image, ImageProcessor *imgProc)
 {
-    uint8_t *data = nullptr;
-
     // TODO data could be allocated only once, passing it as arg to convert function.
-    data = convert_YUV_420_888_to_YUV_12(image);
+    uint8_t *data = convert_YUV_420_888_to_YUV_12(image);
 
     imgProc->buffer = data;
     imgProc->exec();
@@ -85,7 +83,7 @@ static void processImage(AImage *image, ImageProcessor *imgProc)
 AImageReader* CameraEngine::createJpegReader(ImageProcessor &imgProc)
 {
     AImageReader* reader = nullptr;
-    media_status_t status = AImageReader_new(imgProc.w, imgProc.h, AIMAGE_FORMAT_YUV_420_888,
+    media_status_t status = AImageReader_new(width, height, IMG_FORMAT,
                                              4, &reader);
     if (status != AMEDIA_OK) {
         LOGE("status is not AMEDIA OK, %d", status);
@@ -159,10 +157,10 @@ void CameraEngine::initCam()
 {
     cameraManager = ACameraManager_create();
 
-    auto id = getBackFacingCamId(cameraManager);
-    ACameraManager_openCamera(cameraManager, id.c_str(), &cameraDeviceCallbacks, &cameraDevice);
+    camera_id = getBackFacingCamId(cameraManager);
+    ACameraManager_openCamera(cameraManager, camera_id.c_str(), &cameraDeviceCallbacks, &cameraDevice);
 
-    printCamProps(cameraManager, id.c_str());
+    printCamProps(cameraManager, camera_id.c_str(), IMG_FORMAT);
 }
 
 void CameraEngine::exitCam()
@@ -187,12 +185,16 @@ void CameraEngine::exitCam()
     }
 }
 
-void CameraEngine::initCamSession(ImageProcessor &imgProc)
+void CameraEngine::initCamSession(ImageProcessor &imgProc, const int32_t req_w, const int32_t req_h)
 {
-    // TODO set values from Camera2ndk api, for now use hardcoded values of createJpegReader()
-    imgProc.w = 1920;
-    imgProc.h = 1080;
-    imgProc.pipe.initImagePipe(1920, 1080, 4);
+    bool res = calcPreviewSize(cameraManager, camera_id.c_str(), IMG_FORMAT, req_w, req_h, width, height);
+    if (!res) {
+        LOGE("Couldn't find a camera image resolution suitable that fits the requested one");
+        abort();
+    }
+    imgProc.w = width;
+    imgProc.h = height;
+    imgProc.pipe.initImagePipe(width, height, 4);
 
     // Prepare request for texture target
     ACameraDevice_createCaptureRequest(cameraDevice, TEMPLATE_PREVIEW, &request);

@@ -110,6 +110,7 @@ static void imageCallback(void* context, AImageReader* reader);
  */
 class CameraEngine {
 private:
+    static constexpr AIMAGE_FORMATS IMG_FORMAT = AIMAGE_FORMAT_YUV_420_888;
     ACameraManager *cameraManager = nullptr;
     ACameraDevice *cameraDevice = nullptr;
     ACaptureRequest *request = nullptr;
@@ -121,8 +122,9 @@ private:
     ACaptureSessionOutput *output = nullptr;
     ACaptureSessionOutputContainer *outputs = nullptr;
 
-    int width = 640;
-    int height = 480;
+    std::string camera_id;
+    int width = 0;
+    int height = 0;
 
     WorkerThread wThread;
 
@@ -131,7 +133,7 @@ private:
 public:
 
     void exitCam();
-    void initCamSession(ImageProcessor &imgProc);
+    void initCamSession(ImageProcessor &imgProc, const int32_t req_w, const int32_t req_h);
     void setSize(int w, int h);
     void initCam();
 };

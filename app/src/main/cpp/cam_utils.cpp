@@ -15,13 +15,48 @@
 
 namespace sixo {
 
-    void printCamProps(ACameraManager *cameraManager, const char *id)
-    {
-        // exposure range
+    // Mimicking openCV Camera2Renderer function cacPreviewSize
+    bool
+    calcPreviewSize(ACameraManager *cameraManager, const char *id, const int32_t req_f, const int req_w,
+                   const int req_h, int32_t &out_w, int32_t &out_h) {
         ACameraMetadata *metadataObj;
         ACameraManager_getCameraCharacteristics(cameraManager, id, &metadataObj);
-
         ACameraMetadata_const_entry entry = {0};
+
+        ACameraMetadata_getConstEntry(metadataObj,
+                                      ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
+
+        float aspect = (float) req_w / req_h;
+        for (int i = 0; i < entry.count; i += 4) {
+            // We are only interested in output streams, so skip input stream
+            int32_t input = entry.data.i32[i + 3];
+            if (input)
+                continue;
+
+            int32_t format = entry.data.i32[i + 0];
+            if (format == req_f) {
+                int32_t w = entry.data.i32[i + 1];
+                int32_t h = entry.data.i32[i + 2];
+                if (w <= req_w && h <= req_h &&
+                    out_w <= w && out_h <= h &&
+                    abs(aspect - (float) w / h) < 0.2) {
+                    out_w = w;
+                    out_h = h;
+                }
+            }
+        }
+        LOGI("best size: %d, %d", out_w, out_h);
+        if( out_w == 0 || out_h == 0) return false;
+        else return true;
+    }
+
+    void printCamProps(ACameraManager *cameraManager, const char *id, const int32_t req_f)
+    {
+        ACameraMetadata *metadataObj;
+        ACameraManager_getCameraCharacteristics(cameraManager, id, &metadataObj);
+        ACameraMetadata_const_entry entry = {0};
+
+        // exposure range
         ACameraMetadata_getConstEntry(metadataObj,
                                       ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE, &entry);
 
@@ -40,7 +75,6 @@ namespace sixo {
         LOGD("camProps: minSensitivity=%d vs maxSensitivity=%d", minSensitivity, maxSensitivity);
         ////////////////////////////////////////////////////////////////
 
-        // JPEG format
         ACameraMetadata_getConstEntry(metadataObj,
                                       ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
 
@@ -52,7 +86,7 @@ namespace sixo {
                 continue;
 
             int32_t format = entry.data.i32[i + 0];
-            if (format == AIMAGE_FORMAT_JPEG)
+            if (format == req_f)
             {
                 int32_t width = entry.data.i32[i + 1];
                 int32_t height = entry.data.i32[i + 2];

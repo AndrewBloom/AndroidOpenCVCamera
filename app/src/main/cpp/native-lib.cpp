@@ -97,7 +97,7 @@ JNIEXPORT void JNICALL
 Java_com_bloomengineeringltd_androidopencvcamera_GLES3JNILib_init(JNIEnv *env, jobject thiz) {
     LOGD("onSurfaceCreated()");
     imgProc.processFunc = processFrame;
-    cameraEngine.initCamSession(imgProc);
+    cameraEngine.initCamSession(imgProc, 1280, 920);
     shaderManager = new ShaderManager();
     textureQuad = new Model3d(4, ShaderManager::TEXTURE2D, shaderManager);
     textureQuad->loadBuffers((void *) QUAD);
