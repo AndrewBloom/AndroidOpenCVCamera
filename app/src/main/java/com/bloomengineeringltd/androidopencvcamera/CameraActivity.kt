@@ -15,7 +15,7 @@ import android.widget.Toast
 import org.opencv.android.CameraBridgeViewBase
 
 class CameraActivity : Activity() {
-    private var mView: MyGLSurfaceView? = null
+    private var mView: GLES3JNIView? = null
     private var mSwitch: Switch? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,17 +61,11 @@ class CameraActivity : Activity() {
         // Setup switch to swap between back and front camera
         mSwitch = findViewById<View>(R.id.camera_switch) as Switch
         mSwitch!!.setOnCheckedChangeListener { buttonView, isChecked ->
-            if (isChecked) {
-                mView!!.setFrontFacing(true)
-                mView!!.setCameraIndex(CameraBridgeViewBase.CAMERA_ID_FRONT)
-            } else {
-                mView!!.setFrontFacing(false)
-                mView!!.setCameraIndex(CameraBridgeViewBase.CAMERA_ID_BACK)
-            }
+            mView!!.frontFacing = isChecked
         }
-        mView = findViewById<View>(R.id.my_gl_surface_view) as MyGLSurfaceView
-        mView!!.setMaxCameraPreviewSize(1280, 920)
-        mView!!.cameraTextureListener = mView
+        mView = findViewById<View>(R.id.my_gl_surface_view) as GLES3JNIView
+        //mView!!.setMaxCameraPreviewSize(1280, 920)
+        //mView!!.cameraTextureListener = mView
     }
 
     override fun onRequestPermissionsResult(
@@ -82,7 +76,7 @@ class CameraActivity : Activity() {
             MY_PERMISSIONS_REQUEST_CAMERA -> {
 
                 // If request is cancelled, the result arrays are empty.
-                if (grantResults.size > 0
+                if (grantResults.isNotEmpty()
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED
                 ) {
                     //Permission granted
@@ -92,17 +86,21 @@ class CameraActivity : Activity() {
     }
 
     override fun onResume() {
-        mView!!.onResume()
         super.onResume()
+        initCam()
+        mView!!.onResume()
     }
 
     public override fun onPause() {
-        mView!!.onPause()
         super.onPause()
+        exitCam()
+        mView!!.onPause()
     }
 
+    external fun initCam()
+    external fun exitCam()
+
     companion object {
-        // Used to load the 'native-lib' and 'opencv' libraries on application startup.
         init {
             System.loadLibrary("native-lib")
         }

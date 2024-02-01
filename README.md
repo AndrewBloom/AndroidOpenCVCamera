@@ -1,17 +1,17 @@
 # AndroidOpenCVCamera
 A boilerplate camera app for processing camera preview frames in real-time using the OpenCV Android SDK and the native OpenCV library.
 
-This is intended to give developers a simple way to prototype real-time image processing techniques on a smartphone. The application is just the simplest demo for using OpenCV and uses a very slow way to grab images, which is through openGL glReadPixels. It's far from being the best practice and it's quite slow. 
+This is intended to give developers a simple way to prototype real-time image processing techniques on a smartphone. The application uses advanced techniques to pass images around. The Camera management is done on C++ using the CameraEngine class that in turn uses Camera2Ndk. The image is processed through a worker thread implemented in C++. The communication between camera sdk and worker thread is based on a lockless triple buffer. A lockless triple buffer is the base also of the class managing communication between the worker thread and the openGL thread. A simple 3d engine that shows textures on screen is used for displaying the processed images.
 
 As an example, this application uses OpenCV to get the Laplacian of each preview frame.
 
 ![AndroidOpenCVCamera screenshot](https://lh3.googleusercontent.com/B2lvLW6ZU6-V-k8IEN2p0ZmePYehoEFV8VEm2nTfK8M0mDfyHBpocy8JtyJEoPaBgtx2KYWTIT-nmrjHqhjb5BeWU_c9my4HydEk2LuNga2C2vCHD9dDk2Tj_jsp6_XQUwOw2AG_0W20g8eJKBEpMRLtnjDZIOzmaMkUxCRskFaF02BEEpWY1bIUwCFFfvh5u5_lcIQ0UT0LV4HST11nt09Le_yIc4hFWdjsvRpgpJLBTYCl7jPuY-MoRSXSGuAE3Fcvyj6W-FLBRICnxDU-UzDqFCcH506k9q7k8OeYIfG34geylx5MPNbCgRz7x-PUiLRZ_UTdnDMbdgSMouZUrCk3nxujNp367ya1FPzNuIW-uad4zw0AnTMz2FYyRL_Ygsqdhfp94B2qCvrcl2jFmiYGbtaJoIun3gtRwDcXkbDyjPg1sdJDrCZEEzm0zMJDkpZpfjUllQ0CleZ9ITaO_tCrI7ahJFwxTqWyLmcV3W5cMM19azaiOyaXxmnh3i0ups2A5awnMWcDRPdRfh6sJzSbAsOJ4i_-vJOWN8y2ug3r4IQXKCVrwHAwqZmPEMNEa0cJL3brO_Awvj6C4swd1hGFfeeuH-gvYuEp0uDaX7l3m6YPw5dFeb7PmLi1zMCiYdKf5Tf661pMVN9VYjruWjYYSVzxOLIODw=w377-h625-no)
 
 ## Features
-- Modifies preview frame from Camera2 API with OpenCV Android SDK
+- Modifies preview frame from Camera2Ndk API with OpenCV Android SDK
 - Performs image processing with native C++
-- Ability to swap between front and back cameras
-- Shows FPS in application
+- Ability to swap between front and back cameras - not working
+- Shows FPS in application - not working
 
 ## Setup
 #### [Tested with OpenCV 4.8]
@@ -47,4 +47,5 @@ The app should build and run now. If you want to modify the behavior of the appl
 I updated the sample from https://github.com/J0Nreynolds/AndroidOpenCVCamera to an update version of OpenCV (4.8), the android app (manifest and gradle) and improved the CMakelist file.
 
 ## Original Credits
+For Camera2Ndk usage inspiration was taken from [Sixo Github](https://github.com/sixo/native-camera/tree/master) and his [Using Android Native Camera API (CPU & GPU Processing) tutorial](https://www.sisik.eu/blog/android/ndk/camera)
 I created this application using OpenCV's Android samples, namely [Tutorial 4 - OpenCL](https://github.com/opencv/opencv/tree/3.4/samples/android/tutorial-4-opencl). The OpenCL sample demonstrated how to use the OpenCV Android SDK's `CameraGLSurfaceView`, which provides a nice interface for intercepting and processing Android camera preview frames.

@@ -52,7 +52,7 @@
                 app:layout_constraintVertical_bias="1.0" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <com.bloomengineeringltd.androidopencvcamera.MyGLSurfaceView
+        <com.bloomengineeringltd.androidopencvcamera.GLES3JNIView
             android:id="@+id/my_gl_surface_view"
             android:layout_width="0dp"
             android:layout_height="0dp"

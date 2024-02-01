@@ -3,13 +3,7 @@ project(AndroidOpenCVCamera)
 
 # Make sure we use flags for OpenGL in cpp
 set(CMAKE_VERBOSE_MAKEFILE on)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
-
-add_library(native-lib SHARED
-        common.hpp
-        native-lib.cpp
-        camera_utils.cpp
-)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++17")
 
 # OpenCV library
 find_package(OpenCV 4)
@@ -20,9 +14,22 @@ endif()
 MESSAGE("OPENCV VERSION:")
 MESSAGE(${OpenCV_VERSION})
 
+set(OPENGL_LIB GLESv3)
+
+find_package(Bloom3dEngineNdk REQUIRED CONFIG)
+
+add_library(native-lib SHARED
+        native-lib.cpp
+        common.hpp
+        camera_engine.cpp
+        cam_utils.cpp
+        )
+
 # Link libraries
 target_link_libraries( native-lib
         ${OpenCV_LIBS}
+        Bloom3dEngineNdk::Bloom3dEngineNdk
+        ${OPENGL_LIB}
         android
         camera2ndk
         log )

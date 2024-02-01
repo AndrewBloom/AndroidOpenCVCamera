@@ -1,8 +1,13 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
 
 android {
     compileSdkVersion 34
     namespace 'com.bloomengineeringltd.androidopencvcamera'
+    ndkVersion '25.1.8937393'
+
     defaultConfig {
         applicationId "com.bloomengineeringltd.androidopencvcamera"
         minSdkVersion 24
@@ -12,8 +17,10 @@ android {
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         externalNativeBuild {
             cmake {
-                cppFlags '-std=c++17 -lGLESv2'
+                cppFlags ''
                 arguments "-DOpenCV_DIR="+"${project.rootDir}/sdk/native/jni"
+                arguments "-DANDROID_STL=c++_shared"
+                arguments "-DANDROID_ARM_NEON=ON"
             }
         }
         ndk {
@@ -26,13 +33,33 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    buildFeatures {
+        prefab = true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            version '3.22.1'
+        }
+    }
+    packagingOptions {
+        jniLibs {
+            pickFirsts += ['**/libc++_shared.so']
+        }
+    }
 }
 
 dependencies {
+    implementation files('libs/Bloom3dEngineNdk-release.aar')
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation fileTree(include: ['*.jar', '.so'], dir: 'libs')
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.core:core-ktx:+'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'

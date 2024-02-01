@@ -1,320 +1,139 @@
-#include <jni.h>
-#include <string>
-#include <fstream>
-#include <vector>
-#include <thread>
+#ifndef CAMERA_ENGINE_H
+#define CAMERA_ENGINE_H
 
 #include <camera/NdkCameraManager.h>
-#include <camera/NdkCameraMetadata.h>
 #include <camera/NdkCameraDevice.h>
 #include <media/NdkImageReader.h>
-#include <android/native_window_jni.h>
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
+#include <thread>
+#include <unistd.h>
 
-#include "cam_utils.h"
-#include "common.hpp"
-
-
-using namespace sixo;
-
-
+#include "ImagePipe.h"
 /**
- * Variables used to initialize and manage native camera
+ * ImageProcessor encapsulates 2 elements:
+ * - the pipe used to pass a processed frame to the OpenGL thread
+ * - the function that processes the frame (through the callback processFunc).
+ * parameters for the callback are stored as members and are the width and the height of the
+ * image, which is stored on the buffer, qnd the output pipe used to send the image further.
  */
-
-static ACameraManager* cameraManager = nullptr;
-
-static ACameraDevice* cameraDevice = nullptr;
-
-static ACaptureRequest* request = nullptr;
-
-static ACameraCaptureSession* textureSession = nullptr;
-
-static ANativeWindow* imageWindow = nullptr;
-
-static ACameraOutputTarget* imageTarget = nullptr;
-
-static AImageReader* imageReader = nullptr;
-
-static ACaptureSessionOutput* imageOutput = nullptr;
-
-static ACaptureSessionOutput* output = nullptr;
-
-static ACaptureSessionOutputContainer* outputs = nullptr;
-
-
-/**
- * GL stuff - mostly used to draw the frames captured
- * by camera into a SurfaceTexture
- */
-
-static GLuint prog;
-static GLuint vtxShader;
-static GLuint fragShader;
-
-static GLint vtxPosAttrib;
-static GLint uvsAttrib;
-static GLint mvpMatrix;
-static GLint texMatrix;
-static GLint texSampler;
-static GLint color;
-static GLint size;
-static GLuint buf[2];
-static GLuint textureId;
-
-static int width = 640;
-static int height = 480;
-
-
-/**
- * Device listeners
- */
-
-static void onDisconnected(void* context, ACameraDevice* device)
+class ImageProcessor
 {
-    LOGD("onDisconnected");
-}
-
-static void onError(void* context, ACameraDevice* device, int error)
-{
-    LOGD("error %d", error);
-}
-
-static ACameraDevice_stateCallbacks cameraDeviceCallbacks = {
-        .context = nullptr,
-        .onDisconnected = onDisconnected,
-        .onError = onError,
+public:
+    ImageProcessor(ImagePipe &p) : pipe(p) {};
+    int w;
+    int h;
+    uint8_t *buffer;
+    ImagePipe &pipe;
+    void (*processFunc)(int w, int h, uint8_t *buffer, ImagePipe &pipe);
+    void exec() { (*processFunc)(w, h, buffer, pipe); };
 };
 
-
 /**
- * Session state callbacks
+ * Class the wraps AImage and deletes it using RAII. Movable only, to guarantee proper
+ * release of the resource only once.
  */
-
-static void onSessionActive(void* context, ACameraCaptureSession *session)
+class AImageWrapper
 {
-    LOGD("onSessionActive()");
-}
-
-static void onSessionReady(void* context, ACameraCaptureSession *session)
-{
-    LOGD("onSessionReady()");
-}
-
-static void onSessionClosed(void* context, ACameraCaptureSession *session)
-{
-    LOGD("onSessionClosed()");
-}
-
-static ACameraCaptureSession_stateCallbacks sessionStateCallbacks {
-        .context = nullptr,
-        .onActive = onSessionActive,
-        .onReady = onSessionReady,
-        .onClosed = onSessionClosed
-};
-
-
-/**
- * Image reader setup. If you want to use AImageReader, enable this in CMakeLists.txt.
- */
-
-static void imageCallback(void* context, AImageReader* reader)
-{
+public:
     AImage *image = nullptr;
-    auto status = AImageReader_acquireNextImage(reader, &image);
-    LOGD("imageCallback()");
-    // Check status here ...
-
-    // Try to process data without blocking the callback
-    std::thread processor([=](){
-
-        uint8_t *data = nullptr;
-        int len = 0;
-        AImage_getPlaneData(image, 0, &data, &len);
-
-        // Process data here
-        // ...
-
-        AImage_delete(image);
-    });
-    processor.detach();
-}
-
-AImageReader* createJpegReader()
-{
-    AImageReader* reader = nullptr;
-    media_status_t status = AImageReader_new(640, 480, AIMAGE_FORMAT_JPEG,
-                     4, &reader);
-
-    //if (status != AMEDIA_OK)
-        // Handle errors here
-
-    AImageReader_ImageListener listener{
-            .context = nullptr,
-            .onImageAvailable = imageCallback,
+    int64_t  timestamp = 0;
+    AImageWrapper(){};
+    // TODO TripleBuffer class doesn't support move
+    AImageWrapper(AImageWrapper&& src) : image(src.image), timestamp(src.timestamp) {
+        src.image = nullptr;
+        src.timestamp = 0;
     };
-
-    AImageReader_setImageListener(reader, &listener);
-
-    return reader;
-}
-
-ANativeWindow* createSurface(AImageReader* reader)
-{
-    ANativeWindow *nativeWindow;
-    AImageReader_getWindow(reader, &nativeWindow);
-
-    return nativeWindow;
-}
-
-
-/**
- * Capture callbacks
- */
-
-void onCaptureFailed(void* context, ACameraCaptureSession* session,
-                     ACaptureRequest* request, ACameraCaptureFailure* failure)
-{
-    LOGE("onCaptureFailed ");
-}
-
-void onCaptureSequenceCompleted(void* context, ACameraCaptureSession* session,
-                                int sequenceId, int64_t frameNumber)
-{}
-
-void onCaptureSequenceAborted(void* context, ACameraCaptureSession* session,
-                              int sequenceId)
-{}
-
-void onCaptureCompleted (
-        void* context, ACameraCaptureSession* session,
-        ACaptureRequest* request, const ACameraMetadata* result)
-{
-    LOGD("Capture completed");
-}
-
-static ACameraCaptureSession_captureCallbacks captureCallbacks {
-        .context = nullptr,
-        .onCaptureStarted = nullptr,
-        .onCaptureProgressed = nullptr,
-        .onCaptureCompleted = onCaptureCompleted,
-        .onCaptureFailed = onCaptureFailed,
-        .onCaptureSequenceCompleted = onCaptureSequenceCompleted,
-        .onCaptureSequenceAborted = onCaptureSequenceAborted,
-        .onCaptureBufferLost = nullptr,
+    AImageWrapper &  operator= (AImageWrapper && src) {
+        release();
+        image = src.image;
+        timestamp = src.timestamp;
+        src.image = nullptr;
+        src.timestamp = 0;
+        return *this;
+    };
+    bool acquire (AImageReader *reader) {
+        if (image != nullptr) AImage_delete(image);
+        auto res = AImageReader_acquireLatestImage(reader, &image);
+        if (res != AMEDIA_OK) return false;
+        AImage_getTimestamp(image, &timestamp);
+        return true;
+    }
+    ~AImageWrapper(){
+        if (image!= nullptr) AImage_delete(image);
+    }
+    void release() { if (image!= nullptr) AImage_delete(image); image = nullptr; }
 };
 
-
 /**
- * Functions used to set-up the camera and draw
- * camera frames into SurfaceTexture
+ * A worker thread that uses a lockless Triple buffer as queue. Images are extracted from the
+ * reader and wrote on the pipe, this is usually triggered by the available image callback of the
+ * reader itself. Once started, the thread loops and extracts images from the triple buffer and
+ * processes them through the assignable callback  cb.
  */
-
-static void initCam()
+class WorkerThread
 {
-    cameraManager = ACameraManager_create();
-
-    auto id = getBackFacingCamId(cameraManager);
-    ACameraManager_openCamera(cameraManager, id.c_str(), &cameraDeviceCallbacks, &cameraDevice);
-
-    printCamProps(cameraManager, id.c_str());
-}
-
-static void exitCam()
-{
-    if (cameraManager)
-    {
-        // Stop recording to SurfaceTexture and do some cleanup
-        ACameraCaptureSession_stopRepeating(textureSession);
-        ACameraCaptureSession_close(textureSession);
-        ACaptureSessionOutputContainer_free(outputs);
-        ACaptureSessionOutput_free(output);
-
-        ACameraDevice_close(cameraDevice);
-        ACameraManager_delete(cameraManager);
-        cameraManager = nullptr;
-
-        AImageReader_delete(imageReader);
-        imageReader = nullptr;
-
-        // Capture request for SurfaceTexture
-        ACaptureRequest_free(request);
+private:
+    std::thread _thread;
+    void (*cb)(AImage* img, ImageProcessor* imgProc) = nullptr;
+    TripleBuffer<AImageWrapper> imgTBuf;
+    std::atomic_bool stopping = false;
+public:
+    WorkerThread() :imgTBuf(NO_INIT) { }
+    ~WorkerThread() { stopping = true; _thread.join(); }
+    void start(void(*callback)(AImage*, ImageProcessor *), ImageProcessor *imgProc) {
+        cb = callback;
+        _thread = std::thread([this, imgProc]() {
+            while (true) {
+                if (!imgTBuf.IsDirty()) {
+                    usleep(1000); // TODO try some values
+                    continue;
+                }
+                if (stopping) return;
+                AImageWrapper imgWrp = (AImageWrapper &&) std::move(imgTBuf.SwapAndRead());
+                AImage* img = imgWrp.image;
+                (*cb)(img, imgProc);
+            }
+        });
     }
-}
 
-static void initCam(JNIEnv* env, jobject surface)
-{
-    // Prepare request for texture target
-    ACameraDevice_createCaptureRequest(cameraDevice, TEMPLATE_PREVIEW, &request);
+    void pushImage(AImageReader *reader) {
+        AImageWrapper wrapper;
+        if (!wrapper.acquire(reader)) return;
+        imgTBuf.WriteAndSwap(std::move(wrapper));
+    }
+};
 
-    // Prepare outputs for session
-    ACaptureSessionOutputContainer_create(&outputs);
-
-// Enable ImageReader example in CMakeLists.txt. This will additionally
-// make image data available in imageCallback().
-    imageReader = createJpegReader();
-    imageWindow = createSurface(imageReader);
-    ANativeWindow_acquire(imageWindow);
-    ACameraOutputTarget_create(imageWindow, &imageTarget);
-    ACaptureRequest_addTarget(request, imageTarget);
-    ACaptureSessionOutput_create(imageWindow, &imageOutput);
-    ACaptureSessionOutputContainer_add(outputs, imageOutput);
-
-    // Create the session
-    ACameraDevice_createCaptureSession(cameraDevice, outputs, &sessionStateCallbacks, &textureSession);
-
-    // Start capturing continuously
-    ACameraCaptureSession_setRepeatingRequest(textureSession, &captureCallbacks, 1, &request, nullptr);
-}
-
-static void initSurface(JNIEnv* env, jint texId, jobject surface)
-{
-    // Prepare the surfaces/targets & initialize session
-    initCam(env, surface);
-}
-
-static void drawFrame(JNIEnv* env, jfloatArray texMatArray)
-{
-
-}
-
+// defined here so it can be both a static and friend function.
+static void imageCallback(void* context, AImageReader* reader);
 
 /**
- * JNI stuff
+ * The Camera Engine
  */
+class CameraEngine {
+private:
+    ACameraManager *cameraManager = nullptr;
+    ACameraDevice *cameraDevice = nullptr;
+    ACaptureRequest *request = nullptr;
+    ACameraCaptureSession *textureSession = nullptr;
+    ANativeWindow *imageWindow = nullptr;
+    ACameraOutputTarget *imageTarget = nullptr;
+    AImageReader *imageReader = nullptr;
+    ACaptureSessionOutput *imageOutput = nullptr;
+    ACaptureSessionOutput *output = nullptr;
+    ACaptureSessionOutputContainer *outputs = nullptr;
 
-extern "C" {
+    int width = 640;
+    int height = 480;
 
-JNIEXPORT void JNICALL
-Java_eu_sisik_cam_MainActivity_initCam(JNIEnv *env, jobject)
-{
-initCam();
-}
+    WorkerThread wThread;
 
-JNIEXPORT void JNICALL
-Java_eu_sisik_cam_MainActivity_exitCam(JNIEnv *env, jobject)
-{
-exitCam();
-}
+    AImageReader *createJpegReader(ImageProcessor &imgProc);
+    friend void imageCallback(void* context, AImageReader* reader);
+public:
 
-JNIEXPORT void JNICALL
-Java_eu_sisik_cam_CamRenderer_onSurfaceCreated(JNIEnv *env, jobject, jint texId, jobject surface)
-{
-LOGD("onSurfaceCreated()");
-initSurface(env, texId, surface);
-}
+    void exitCam();
+    void initCamSession(ImageProcessor &imgProc);
+    void setSize(int w, int h);
+    void initCam();
+};
 
-JNIEXPORT void JNICALL
-Java_eu_sisik_cam_CamRenderer_onSurfaceChanged(JNIEnv *env, jobject, jint w, jint h)
-{
-width = w;
-height = h;
-}
-
-JNIEXPORT void JNICALL
-Java_eu_sisik_cam_CamRenderer_onDrawFrame(JNIEnv *env, jobject, jfloatArray texMatArray)
-{
-drawFrame(env, texMatArray);
-}
-} // Extern C
+#endif // CAMERA_ENGINE_H
