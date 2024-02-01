@@ -66,6 +66,7 @@ static ACameraCaptureSession_stateCallbacks sessionStateCallbacks {
 static void imageCallback(void* context, AImageReader* reader)
 {
     CameraEngine *cameraEngine = reinterpret_cast<CameraEngine*>(context);
+    cameraEngine->fps.hit();
     cameraEngine->wThread.pushImage(reader);
 }
 
@@ -198,6 +199,8 @@ void CameraEngine::initCamSession(ImageProcessor &imgProc, const int32_t req_w, 
 
     // Prepare request for texture target
     ACameraDevice_createCaptureRequest(cameraDevice, TEMPLATE_PREVIEW, &request);
+    int32_t fpsRange[2] = {60, 60};
+    ACaptureRequest_setEntry_i32(request, ACAMERA_CONTROL_AE_TARGET_FPS_RANGE, 2, &fpsRange[0]);
 
     // Prepare outputs for session
     ACaptureSessionOutputContainer_create(&outputs);

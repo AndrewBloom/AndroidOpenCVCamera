@@ -8,6 +8,8 @@
 #include <unistd.h>
 
 #include "ImagePipe.h"
+#include "util/perfmeter.h"
+
 /**
  * ImageProcessor encapsulates 2 elements:
  * - the pipe used to pass a processed frame to the OpenGL thread
@@ -76,6 +78,7 @@ private:
     void (*cb)(AImage* img, ImageProcessor* imgProc) = nullptr;
     TripleBuffer<AImageWrapper> imgTBuf;
     std::atomic_bool stopping = false;
+    PerfMeter fps = PerfMeter("Worker Thread frames processed");
 public:
     WorkerThread() :imgTBuf(NO_INIT) { }
     ~WorkerThread() { stopping = true; _thread.join(); }
@@ -91,6 +94,7 @@ public:
                 AImageWrapper imgWrp = (AImageWrapper &&) std::move(imgTBuf.SwapAndRead());
                 AImage* img = imgWrp.image;
                 (*cb)(img, imgProc);
+                fps.hit();
             }
         });
     }
@@ -130,6 +134,7 @@ private:
 
     AImageReader *createJpegReader(ImageProcessor &imgProc);
     friend void imageCallback(void* context, AImageReader* reader);
+    PerfMeter fps = PerfMeter("CameraEngine frame available");
 public:
 
     void exitCam();

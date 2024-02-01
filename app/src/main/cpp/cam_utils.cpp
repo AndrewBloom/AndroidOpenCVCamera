@@ -75,6 +75,14 @@ namespace sixo {
         LOGD("camProps: minSensitivity=%d vs maxSensitivity=%d", minSensitivity, maxSensitivity);
         ////////////////////////////////////////////////////////////////
 
+        ACameraMetadata_getConstEntry(metadataObj, ACAMERA_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES, &entry);
+        for (int i = 0; i < entry.count; )
+        {
+            int32_t fps_low = entry.data.i32[i++];
+            int32_t fps_high = entry.data.i32[i++];
+            LOGI("Frame rate range: [%d,%d] fps", fps_low, fps_high);
+        }
+
         ACameraMetadata_getConstEntry(metadataObj,
                                       ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
 
