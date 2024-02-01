@@ -11,10 +11,7 @@
 #include "ImagePipe.h"
 
 void processFrame(int w, int h, uint8_t *buffer, ImagePipe &pipe) {
-    // This could be heavily simplified using luminance channel as grey image, it would then
-    // skip the conversion from N12 to RGBA and RGBA to grayscale. It gives 50% gain, left as it is
-    // just to document some conversions...
-    cv::UMat yuv12 = cv::Mat(h, w, CV_8UC1, buffer).getUMat(cv::ACCESS_READ);
+    cv::Mat yuv12 = cv::Mat(h, w, CV_8UC1, buffer);
 
     LOGD("Processing on CPU");
     int64_t t;
